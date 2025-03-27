@@ -1,9 +1,8 @@
 import express, { Request, Response } from "express";
+import { post } from "../controllers/BuildController";
 
 const router = express.Router();
 
-router.get('/', (req: Request, res: Response) => {
-    res.send('Hello, Build!');
-});
+router.post('/', post);
 
 export default router;
