@@ -4,6 +4,7 @@ import TempFileService from './TempFileService';
 import { existsSync, promises as fs } from 'fs';
 import { on } from 'events';
 import { assert } from 'console';
+import e from 'express';
 
 type ExitCode = number;
 
@@ -27,11 +28,12 @@ export class RunResult {
 
 async function runOnOutput(
     command: string, args: string[], options: SpawnOptionsWithoutStdio,
-    onStdout: (chunk: string) => void, onStderr: (chunk: string) => void
+    onStdout: (chunk: string) => void, onStderr: (chunk: string) => void,
+    encoding: BufferEncoding
 ): Promise<number> {
     const child = spawn(command, args, options);
-    child.stdout.setEncoding('utf-8');
-    child.stderr.setEncoding('utf-8');
+    child.stdout.setEncoding(encoding);
+    child.stderr.setEncoding(encoding);
     child.stdout.on('data', onStdout);
     child.stderr.on('data', onStderr);
     child.stdout.on('error', (error) => {
@@ -50,16 +52,25 @@ async function runOnOutput(
     });
 }
 
-async function runForResult(command: string, args: string[], options: SpawnOptionsWithoutStdio): Promise<RunResult> {
+async function runForResult(command: string, args: string[], options: SpawnOptionsWithoutStdio, encoding: BufferEncoding): Promise<RunResult> {
     let output = '';
     const writeOutput = (data: string) => {
         output += data;
     }
-    return runOnOutput(command, args, options, writeOutput, writeOutput).then((exitCode) => {
+    return runOnOutput(command, args, options, writeOutput, writeOutput, encoding).then((exitCode) => {
         return new RunResult(output, exitCode);
     });
 }
 
+
+function expandHomeDir(filePath: string): string {
+    if (filePath.startsWith('~')) {
+        const homeDir = process.env.HOME || '';
+        return path.join(homeDir, filePath.slice(1));
+    }
+    return filePath;
+}
+export const LU_PY_PATH = expandHomeDir('~/repos/lu-lang-py/src/main.py');
 // const keyDir = await createTempDirectory(key);
 //         const luFilePath = path.join(keyDir, `temp.lu`);
 //         const cFilePath = path.join(keyDir, `temp.c`);
@@ -97,11 +108,12 @@ export default class LuService {
     public async transpileLuToC(key: string, inFile: string, outFile: string, timeout: number): Promise<RunResult> {
         return runForResult(
             'python3', [
-                'lu.py', 
+                LU_PY_PATH, 
                 '--input', this.tmp.getPath(key, inFile),
                 '--output', this.tmp.getPath(key, outFile)
             ], 
-            { timeout }
+            { timeout },
+            'ascii'
         );
     }
 
@@ -142,7 +154,8 @@ export default class LuService {
                 '-c', `gcc ${inFile} -o main; ./main`
             ], 
             { timeout }, 
-            onStdout, onStderr
+            onStdout, onStderr,
+            'ascii'
         );
     }
 }

@@ -1,11 +1,12 @@
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import { promisify } from 'util';
 import { existsSync, writeFileSync, readFileSync } from 'fs';
 import TempFileService from '../../src/services/TempFileService';
-import LuService from '../../src/services/LuService';
+import LuService, { LU_PY_PATH } from '../../src/services/LuService';
 import { on } from 'events';
+import { exitCode } from 'process';
 
 const execAsync = promisify(exec);
 
@@ -18,26 +19,55 @@ int main() {
 }
 `;
 
-describe('C Program Compilation and Execution', () => {
+async function isCommandOk(command: string, args: string[]): Promise<boolean> {
+    const child = spawn(command, args, { stdio: 'inherit' });
+    return new Promise((resolve, reject) => {
+        child.on('close', (code) => {
+            console.log(`Command ${command} with args [${args}] exited with code ${code}`);
+            resolve(code! === 0);
+        });
+        child.on('error', (error) => {
+            console.log(`Error running ${command} with args [${args}]: ${error.message}`);
+            resolve(false);
+        });
+    });
+}
+
+describe('Program Compilation and Execution', () => {
     let lu: LuService;
 
     before(async () => {
-        // Check if gcc is installed
-        try {
-            await execAsync('gcc --version');
-        } catch (error) {
-            throw new Error('gcc is not installed');
-        }
-        try {
-            await execAsync('docker --version');
-        } catch (error) {
-            throw new Error('docker is not installed');
-        }
+        expect(await isCommandOk('gcc', ['--version'])).to.be.true;
+        expect(await isCommandOk('docker', ['--version'])).to.be.true;
+        expect(await isCommandOk('python3', [LU_PY_PATH, '--version'])).to.be.true;
         lu = new LuService();
     });
 
     after(async () => {
-        await lu.cleanup();
+        if (lu !== undefined) {
+            await lu.cleanup();
+        }
+    });
+
+    it('should transpile a lu program', async () => {
+        const key = await lu.getKey();
+        await lu.writeFile(key, 'hello.lu', '$print("Hello, World!")', 'ascii');
+        const result = await lu.transpileLuToC(key, 'hello.lu', 'hello.c', 1000);
+        //expect(result.exitCode).to.equal(0);
+        const cCode = await lu.readFile(key, 'hello.c', 'ascii');
+        console.log(cCode);
+        
+        // don't actually need to check correctness of cCode
+
+        let output = '';
+        const onWrite = (data: string) => {
+            output += data;
+        };
+        const exitCode = await lu.compileAndRun(key, 'hello.c', 1000, onWrite);
+        expect(output).to.equal('Hello, World!\n');
+        expect(exitCode).to.equal(0);
+
+        lu.deleteKey(key);
     });
 
     it('should compile and run a simple C program', async () => {
@@ -47,9 +77,9 @@ describe('C Program Compilation and Execution', () => {
         const onWrite = (data: string) => {
             output += data;
         };
-        const code = await lu.compileAndRun(key, 'hello.c', 1000, onWrite);
+        const exitCode = await lu.compileAndRun(key, 'hello.c', 1000, onWrite);
         expect(output).to.equal('Hello, World!\n');
-        expect(code).to.equal(0);
+        expect(exitCode).to.equal(0);
         lu.deleteKey(key);
     });
 });
