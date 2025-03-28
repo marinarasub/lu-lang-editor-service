@@ -5,6 +5,7 @@ import { existsSync, promises as fs } from 'fs';
 import { on } from 'events';
 import { assert } from 'console';
 import e from 'express';
+import Stream from 'stream';
 
 type ExitCode = number;
 
@@ -28,12 +29,17 @@ export class RunResult {
 
 async function runOnOutput(
     command: string, args: string[], options: SpawnOptionsWithoutStdio,
-    onStdout: (chunk: string) => void, onStderr: (chunk: string) => void,
-    encoding: BufferEncoding
+    onStdout: (chunk: string) => void, onStderr: (chunk: string) => void, 
+    getStdin?: ((stdin: Stream.Writable) => void),
+    encoding: BufferEncoding = 'ascii'
 ): Promise<number> {
     const child = spawn(command, args, options);
+    child.stdin.setDefaultEncoding(encoding);
     child.stdout.setEncoding(encoding);
     child.stderr.setEncoding(encoding);
+    if (getStdin !== undefined) {
+        getStdin(child.stdin);
+    }
     child.stdout.on('data', onStdout);
     child.stderr.on('data', onStderr);
     child.stdout.on('error', (error) => {
@@ -57,7 +63,7 @@ async function runForResult(command: string, args: string[], options: SpawnOptio
     const writeOutput = (data: string) => {
         output += data;
     }
-    return runOnOutput(command, args, options, writeOutput, writeOutput, encoding).then((exitCode) => {
+    return runOnOutput(command, args, options, writeOutput, writeOutput, undefined, encoding).then((exitCode) => {
         return new RunResult(output, exitCode);
     });
 }
@@ -132,6 +138,7 @@ export default class LuService {
     public async compileAndRun(
         key: string, inFile: string, timeout: number,
         onStdout: (chunk: string) => void, onStderr?: ((chunk: string) => void),
+        getStdin?: ((stdin: Stream.Writable) => void)
     ): Promise<ExitCode> {
         const dockerImage = 'gcc:latest' //'alpine:latest';
         const inPath = this.tmp.getPath(key, inFile);
@@ -154,7 +161,7 @@ export default class LuService {
                 '-c', `gcc -O2 -std=c99 -pedantic ${inFile} -o main; ./main`
             ], 
             { timeout }, 
-            onStdout, onStderr,
+            onStdout, onStderr, getStdin,
             'ascii'
         );
     }

@@ -46,17 +46,20 @@ async function post(req: Request, res: Response, next: NextFunction) {
         return;
     }
 
+    const key = await lu.getKey();
     try {
-        const key = await lu.getKey();
         await lu.writeFile(key, 'input.lu', req.body.input, 'ascii');
         const result = await lu.transpileLuToC(key, 'input.lu', 'output.c', 5000);
         if (result.exitCode !== 0) {
+            lu.deleteKey(key);
             res.status(201).json(makeSuccessResponse(key, result.exitCode, result.output, '', -1));
         } else {
             const build = await lu.readFile(key, 'output.c', 'ascii');
+            lu.deleteKey(key);
             res.status(201).json(makeSuccessResponse(key, result.exitCode, result.output, build, -1));
         }
     } catch (error) {
+        lu.deleteKey(key);
         next(error);
     }
 }

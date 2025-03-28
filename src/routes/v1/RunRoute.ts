@@ -1,5 +1,5 @@
 import express from 'express';
-import { post } from '../../controllers/RunControler';
+import { post } from '../../controllers/RunController';
 
 const router = express.Router();
 
