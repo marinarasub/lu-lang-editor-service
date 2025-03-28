@@ -1,5 +1,4 @@
 import http from 'http';
-import * as fs from 'fs';
 import app from './App';
 import { Duplex } from 'stream';
 import url from 'url';
