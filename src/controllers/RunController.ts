@@ -37,19 +37,37 @@ interface Connection {
     onEnd: (exitCode: number) => void;
 }
 
+// 10kb max
+const DEFAULT_LIMIT = 10 * 1024;
+
 class RunConnection {
     private ws: WebSocket | null;
     private stdin: Stream.Writable | null;
     private inBuf: string;
     private outBuf: string;
+    private limitIn: number;
+    private limitOut: number;
+    private bytesIn: number;
+    private bytesOut: number;
     private exitCode: number | null;
 
-    constructor() {
+    constructor(limitIn: number = DEFAULT_LIMIT, limitOut: number = DEFAULT_LIMIT) {
         this.ws = null;
         this.stdin = null;
         this.inBuf = '';
         this.outBuf = '';
+        this.limitIn = limitIn;
+        this.limitOut = limitOut;
+        this.bytesIn = 0;
+        this.bytesOut = 0;
         this.exitCode = null;
+    }
+
+    private close() {
+        if (this.ws !== null) {
+            this.ws.close();
+            this.ws = null;
+        }
     }
 
     setStdin(stdin: Stream.Writable) {
@@ -64,25 +82,34 @@ class RunConnection {
         }
         // if already finished, just close it.
         if (this.exitCode !== null) {
-            ws.close();
-            this.ws = null;
+            this.close();
         }
     }
 
     onSend(data: string) {
         this.outBuf += data;
+        this.bytesOut += data.length;
         // TODO: if too much data, break connection
         if (this.ws !== null) {
-            this.ws.send(data);
+            this.ws.send(this.outBuf);
             this.outBuf = '';
+        }
+        if (this.bytesOut > this.limitOut) {
+            this.ws?.send('\n[output limit exceeded]\n');
+            this.close();
         }
     }
 
     onRecieve(data: string) {
         this.inBuf += data;
+        this.bytesIn += data.length;
         if (this.stdin !== null) {
             this.stdin.write(data);
-            this.inBuf = '';
+            this.inBuf = '';   
+        }
+        if (this.bytesIn > this.limitIn) {
+            this.ws?.send('\n[input limit exceeded]\n');
+            this.close();
         }
     }
 
@@ -93,8 +120,7 @@ class RunConnection {
             if (this.outBuf.length > 0) {
                 this.ws.send(this.outBuf);
             }
-            this.ws?.close();
-            this.ws = null;
+            this.close();
         }
     }
 }
@@ -143,7 +169,7 @@ async function post(req: Request, res: Response, next: NextFunction) {
         let connection = new RunConnection();
         connections.set(key, connection);
 
-        res.status(200).json(makeSuccessResponse(key));
+        res.status(201).json(makeSuccessResponse(key));
 
         const onWrite = (data: string) => {
             connection.onSend(data);
