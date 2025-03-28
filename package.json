@@ -6,8 +6,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
-    "start": "ts-node src/index.ts",
+    "dev": "nodemon --watch src --ext ts --exec ts-node index.ts",
+    "start": "node dist/index.js",
     "test": "mocha -r ts-node/register --timeout 10000 --extension .spec.ts --recursive test",
     "build": "tsc && eslint src --ext .ts",
     "lint": "eslint src --ext .ts --fix"
