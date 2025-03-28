@@ -1,7 +1,6 @@
 import https from 'https';
 import * as fs from 'fs';
 import app from './App';
-import WebSocket from 'ws';
 import { Duplex } from 'stream';
 import url from 'url';
 import { wsServer as runWsServer } from './controllers/RunController';

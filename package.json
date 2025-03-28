@@ -9,7 +9,7 @@
     "start": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
     "test": "mocha -r ts-node/register --timeout 10000 --extension .spec.ts --recursive test",
     "build": "tsc && eslint src --ext .ts",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts --fix"
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",

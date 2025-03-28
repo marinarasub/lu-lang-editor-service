@@ -1,4 +1,4 @@
-import e, { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { body, ValidationError, validationResult } from 'express-validator';
 import { lu } from './services';
 import { WebSocket } from 'ws';
@@ -166,7 +166,7 @@ async function post(req: Request, res: Response, next: NextFunction) {
     const key = await lu.getKey();
     try {
         await lu.writeFile(key, 'main.c', req.body.input, 'ascii');
-        let connection = new RunConnection();
+        const connection = new RunConnection();
         connections.set(key, connection);
 
         res.status(201).json(makeSuccessResponse(key));

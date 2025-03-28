@@ -131,5 +131,5 @@ export default class TempFileService {
 try {
     rmSync(getTempDirectory(), { recursive: true });
 } catch (error) {
-    console.log("Couldn't clean tempdir on startup?");
+    console.log(`Didn't clean tempdir on startup ${error} (perhaps it didn't exist)`);
 }

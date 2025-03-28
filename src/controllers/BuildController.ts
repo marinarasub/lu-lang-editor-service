@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { lu } from './services';
-import { error, time } from 'console';
-import { success } from '../services/LuService';
 import { body, ValidationError, validationResult } from 'express-validator';
 
 // req body should look like

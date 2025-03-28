@@ -1,10 +1,7 @@
 import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import * as path from 'path';
 import TempFileService from './TempFileService';
-import { existsSync, promises as fs } from 'fs';
-import { on } from 'events';
-import { assert } from 'console';
-import e from 'express';
+import { promises as fs } from 'fs';
 import Stream from 'stream';
 
 type ExitCode = number;
@@ -22,7 +19,7 @@ export class RunResult {
         this.exitCode = exitCode;
     }
 
-    public success(): Boolean {
+    public success(): boolean {
         return this.exitCode === 0;
     }
 }
