@@ -56,17 +56,15 @@ describe('App API Endpoints', () => {
 
     describe('WebSocket /run', () => {
         const PORT = 3000;
-        const WS_URL = `wss://localhost:${PORT}`;
-        const HTTP_URL = `https://localhost:${PORT}`;
+        const WS_URL = `ws://localhost:${PORT}`;
+        const HTTP_URL = `http://localhost:${PORT}`;
         // ok, i don't know how to test websocket usng app only so this requires a local server
         it('should establish a WebSocket connection and communicate with the client', (done) => {
-            process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
             fetch(HTTP_URL + '/api/v1/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ input: C_HELLO_WORLD })
             }).then(res => {
-                process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1';
                 expect(res.status).to.equal(201);
                 return res.json();
             }).then((body: any) => {
@@ -88,7 +86,6 @@ describe('App API Endpoints', () => {
                 });
             })
             .catch((err) =>{
-                process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1';
                 done(err);
             });
         });

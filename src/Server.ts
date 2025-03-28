@@ -1,4 +1,4 @@
-import https from 'https';
+import http from 'http';
 import * as fs from 'fs';
 import app from './App';
 import { Duplex } from 'stream';
@@ -6,14 +6,14 @@ import url from 'url';
 import { wsServer as runWsServer } from './controllers/RunController';
 import { IncomingMessage } from 'http';
 
-const httpsOptions = {
-    key: fs.readFileSync('certs/server.key'),
-    cert: fs.readFileSync('certs/server.crt'),
-};
+// const httpsOptions = {
+//     key: fs.readFileSync('certs/server.key'),
+//     cert: fs.readFileSync('certs/server.crt'),
+// };
 
-const httpsServer = https.createServer(httpsOptions, app);
+const server = http.createServer(app);
 
-httpsServer.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+const wsUpgrade = (request: IncomingMessage, socket: Duplex, head: Buffer) => {
     const { pathname } = url.parse(request.url!, false);
   
     if (pathname === '/run') {
@@ -24,6 +24,7 @@ httpsServer.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffe
       socket.destroy();
     }
   }
-);
 
-export default httpsServer;
+server.on('upgrade', wsUpgrade);
+
+export default server;

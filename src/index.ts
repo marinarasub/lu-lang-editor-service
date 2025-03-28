@@ -1,7 +1,7 @@
-import httpsServer from "./Server";
+import server from "./Server";
 
-const port = 3000;
+const port = process.env.PORT || 3000;
 
-httpsServer.listen(port, () => {
-    console.log(`HTTPS server running on port ${port}`);
+server.listen(port, () => {
+    console.log(`server running on port ${port}`);
 });
