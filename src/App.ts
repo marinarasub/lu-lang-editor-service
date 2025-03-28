@@ -1,22 +1,27 @@
 import express from 'express';
+import https from 'https';
+import * as fs from 'fs';
+import api from './routes/VersionRoute';
 
 const app = express();
 const port = 3000;
 
 app.use(express.json());
 
-import runRoute from './routes/RunRoute';
-import buildRoute from './routes/BuildRoute';
+app.use('/api', api);
+app.use('/', api);
 
-app.use('/run', runRoute);
-app.use('/build', buildRoute);
-
-app.get('/', (req, res) => {
-    res.send('Hello, TypeScript with Express!');
+app.use((req, res) => {
+    res.status(404).json({ error: 'Not Found' });
 });
 
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+const httpsOptions = {
+    key: fs.readFileSync('certs/server.key'),
+    cert: fs.readFileSync('certs/server.crt'),
+};
+
+https.createServer(httpsOptions, app).listen(port, () => {
+    console.log(`HTTPS server running on port ${port}`);
 });
 
 export default app;

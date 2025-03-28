@@ -1,3 +1,16 @@
+import { Request, Response, NextFunction } from 'express';
+
+async function post(req: Request, res: Response, next: NextFunction) {
+    try {
+        res.json({ message: 'Hello, Run!' });
+    } catch (error) {
+        console.error(error);
+        next(error);
+    }
+}
+
+export { post };
+
 // const requestStreams = new Map();
 
 // // Endpoint to handle C compilation and execution

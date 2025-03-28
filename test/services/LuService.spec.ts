@@ -51,11 +51,11 @@ describe('Program Compilation and Execution', () => {
 
     it('should transpile a lu program', async () => {
         const key = await lu.getKey();
-        await lu.writeFile(key, 'hello.lu', '$print("Hello, World!")', 'ascii');
+        await lu.writeFile(key, 'hello.lu', '$print("Hello, World!\\n")', 'ascii');
         const result = await lu.transpileLuToC(key, 'hello.lu', 'hello.c', 1000);
         //expect(result.exitCode).to.equal(0);
         const cCode = await lu.readFile(key, 'hello.c', 'ascii');
-        console.log(cCode);
+        //console.log(cCode);
         
         // don't actually need to check correctness of cCode
 

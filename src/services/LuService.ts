@@ -145,13 +145,13 @@ export default class LuService {
             'docker', [
                 'run',
                 '--rm',
-                '--pull', 'always',
+                '--pull', 'missing',
                 '--quiet',
                 '-v', `${path.dirname(inPath)}/:/app/`, 
                 '-w', '/app', 
                 dockerImage, 
                 'sh',
-                '-c', `gcc ${inFile} -o main; ./main`
+                '-c', `gcc -O2 -std=c99 -pedantic ${inFile} -o main; ./main`
             ], 
             { timeout }, 
             onStdout, onStderr,

@@ -6,7 +6,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "start": "ts-node src/App.ts",
+    "start": "nodemon --watch src --ext ts --exec ts-node src/App.ts",
     "test": "mocha -r ts-node/register --timeout 10000 --extension .spec.ts --recursive test",
     "build": "tsc"
   },
@@ -19,6 +19,7 @@
     "@types/supertest": "^6.0.3",
     "chai": "^5.2.0",
     "mocha": "^11.1.0",
+    "nodemon": "^3.1.9",
     "supertest": "^7.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
@@ -26,6 +27,7 @@
   "dependencies": {
     "child_process": "^1.0.2",
     "express": "^4.21.2",
+    "express-validator": "^7.2.1",
     "uuid": "^11.1.0"
   }
 }

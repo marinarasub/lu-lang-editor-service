@@ -1,4 +1,4 @@
-import { promises as fs, existsSync, mkdirSync, realpathSync, rmdirSync } from 'fs';
+import { promises as fs, existsSync, mkdirSync, realpathSync, rmSync } from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { v4 as uuidv4 } from 'uuid';
@@ -43,7 +43,7 @@ export default class TempFileService {
     }
 
     public async cleanup(): Promise<void> {
-        await fs.rmdir(this.root, { recursive: true });
+        await fs.rm(this.root, { recursive: true });
     }
 
     private generateKey(): string {
@@ -66,7 +66,7 @@ export default class TempFileService {
         }
         const keyDir = this.tempKeys.get(key)!.directory;
         this.tempKeys.delete(key);
-        return fs.rmdir(keyDir, { recursive: true });
+        return fs.rm(keyDir, { recursive: true });
     }
 
     public getDir(key: string): string {
@@ -129,7 +129,7 @@ export default class TempFileService {
 
 // On startup, clean up any leftover temp directories
 try {
-    rmdirSync(getTempDirectory(), { recursive: true });
+    rmSync(getTempDirectory(), { recursive: true });
 } catch (error) {
     console.log("Couldn't clean tempdir on startup?");
 }
