@@ -8,10 +8,10 @@ const app = express();
 
 app.use(express.json());
 
-if (process.env.NODE_ENV === 'development') {
+if (config.frontendUrl) {
     // frontend cors for development
     const corsOptions = {
-        origin: 'http://localhost:5001',
+        origin: config.frontendUrl,
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
         credentials: true,
     };

@@ -3,7 +3,7 @@ const HOST = process.env.HOST || 'localhost';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5000';
 
-const LU_ROOT = process.env.LU_ROOT || 'lu-lang-py';
+const LU_ROOT = process.env.LU_ROOT || './lu-lang-py';
 
 const BUILD_TIMEOUT = 10 * 1000; // 10s
 const RUN_TIMEOUT = 15 * 1000; // 15s
