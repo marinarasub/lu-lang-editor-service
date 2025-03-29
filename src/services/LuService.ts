@@ -1,9 +1,10 @@
-import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
+import { ChildProcess, spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import * as path from 'path';
 import TempFileService from './TempFileService';
 import { promises as fs } from 'fs';
 import Stream from 'stream';
 import config from '../constants/config';
+import { exec } from 'child_process';
 
 type ExitCode = number;
 
@@ -25,19 +26,36 @@ export class RunResult {
     }
 }
 
+function defaultKill(child: ChildProcess) {
+    return new Promise((resolve, reject) => resolve(child.kill('SIGKILL')));
+}
+
+function dockerKillName(name: string) {
+    return (child: ChildProcess) => {
+        return new Promise((resolve, reject) => exec(`docker kill ${name}`, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`error killing docker container ${name} (pid ${child.pid}): ${error?.message} exited with code ${error.code}`);
+                return resolve(false);
+            }
+            return resolve(true);
+        }));
+    }
+}
+
 async function runOnOutput(
     command: string, args: string[], options: SpawnOptionsWithoutStdio,
     onStdout: (chunk: string) => void, onStderr: (chunk: string) => void, 
     getStdin?: ((stdin: Stream.Writable) => void),
-    encoding: BufferEncoding = 'ascii'
+    encoding: BufferEncoding = 'ascii',
+    kill = defaultKill,
 ): Promise<number> {
     console.log(`spawning command ${command} with args [${args}]`);
     const child = spawn(command, args, options);
     let timeoutKill = null;
     if (options.timeout !== undefined) {
-        timeoutKill = setTimeout(() => {
+        timeoutKill = setTimeout(async () => {
             console.log(`warning: killing process ${command} with args [${args}] due to timeout`);
-            if (!child.kill('SIGKILL')) {
+            if (!await kill(child)) {
                 throw new Error(`error killing ${command} with args [${args}]`);
             }
         }, options.timeout);
@@ -163,6 +181,9 @@ export default class LuService {
             'docker', [
                 'run',
                 '-i',
+                '--name', key,
+                '--stop-timeout', '5',
+                '-m', '10m', // 10mb memory limit
                 '--rm',
                 '--pull', 'missing',
                 '--quiet',
@@ -174,7 +195,8 @@ export default class LuService {
             ], 
             { timeout }, 
             onStdout, onStderr, getStdin,
-            'ascii'
+            'ascii',
+            dockerKillName(key)
         );
     }
 }
