@@ -36,6 +36,7 @@ interface Connection {
     onSend: (data: string) => void;
     onRecieve: (data: string) => void;
     onExit: (exitCode: number) => void;
+    onAbort: () => void;
     onErr: (error: Error) => void;
 }
 
@@ -117,6 +118,20 @@ class RunConnection {
         }
     }
 
+    onAbort() {
+        this.exitCode = -1;
+        this.outBuf += '\n[process was aborted]\n';
+        if (this.ws !== null) {
+            this.ws.send(this.outBuf);
+            this.close();
+        } else {
+            // after process is killed, wait a bit in case the client hasn't connected yet
+            setTimeout(() => {
+                connections.delete(this.id);
+            }, config.wsTimeout);
+        }
+    }
+
     onExit(exitCode: number) {
         this.exitCode = exitCode;
         this.outBuf += `\n[process exited with code ${exitCode}]\n`;
@@ -124,7 +139,7 @@ class RunConnection {
             this.ws.send(this.outBuf);
             this.close();
         } else {
-            // after process exists, wait a bit in case the client hasn't connected yet
+            // after process exits, wait a bit in case the client hasn't connected yet
             setTimeout(() => {
                 connections.delete(this.id);
             }, config.wsTimeout);
@@ -199,7 +214,12 @@ async function post(req: Request, res: Response, next: NextFunction) {
             connection.setStdin(stdin);
         }
         const exitCode = await lu.compileAndRun(key, 'main.c', config.runTimeout, onWrite, onWrite, getStdin);
-        connection.onExit(exitCode);
+        if (exitCode === null) {
+            connection.onAbort();
+        }
+        else {
+            connection.onExit(exitCode);
+        }
         lu.deleteKey(key);
     } catch (error) {
         connection.onErr(error instanceof Error ? error : new Error('an unknown error occurred'));

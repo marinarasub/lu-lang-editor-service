@@ -31,7 +31,17 @@ async function runOnOutput(
     getStdin?: ((stdin: Stream.Writable) => void),
     encoding: BufferEncoding = 'ascii'
 ): Promise<number> {
+    console.log(`spawning command ${command} with args [${args}]`);
     const child = spawn(command, args, options);
+    let timeoutKill = null;
+    if (options.timeout !== undefined) {
+        timeoutKill = setTimeout(() => {
+            console.log(`warning: killing process ${command} with args [${args}] due to timeout`);
+            if (!child.kill('SIGKILL')) {
+                throw new Error(`error killing ${command} with args [${args}]`);
+            }
+        }, options.timeout);
+    }
     child.stdin.setDefaultEncoding(encoding);
     child.stdout.setEncoding(encoding);
     child.stderr.setEncoding(encoding);
@@ -40,6 +50,9 @@ async function runOnOutput(
     }
     child.stdout.on('data', onStdout);
     child.stderr.on('data', onStderr);
+    child.stdin.on('error', (error) => {
+        throw new Error(`error writing stdin: ${error.message}`);
+    });
     child.stdout.on('error', (error) => {
         throw new Error(`error reading stdout: ${error.message}`);
     });
@@ -48,9 +61,16 @@ async function runOnOutput(
     });
     return new Promise((resolve, reject) => {
         child.on('close', (code) => {
+            console.log(`command ${command} with args [${args}] closed with code ${code}`);
+            if (timeoutKill !== null) {
+                clearTimeout(timeoutKill);
+            }
             resolve(code!);
         });
         child.on('error', (error) => {
+            if (timeoutKill !== null) {
+                clearTimeout(timeoutKill);
+            }
             reject(new Error(`error running ${command} with args [${args}]: ${error.message}`));
         });
     });
@@ -101,13 +121,15 @@ export default class LuService {
 
     // Function to transpile Lu source code to C
     public async transpileLuToC(key: string, inFile: string, outFile: string, timeout: number): Promise<RunResult> {
+        const main = path.resolve(`${config.luRoot}/src/main.py`);
+        const cwd = this.tmp.getDir(key);
         return runForResult(
             'python3', [
-                `${config.luRoot}/src/main.py`, 
-                '--input', this.tmp.getPath(key, inFile),
-                '--output', this.tmp.getPath(key, outFile)
+                main, 
+                '--input', inFile,
+                '--output', outFile,
             ], 
-            { timeout },
+            { timeout, cwd },
             'ascii'
         );
     }
@@ -128,7 +150,7 @@ export default class LuService {
         key: string, inFile: string, timeout: number,
         onStdout: (chunk: string) => void, onStderr?: ((chunk: string) => void),
         getStdin?: ((stdin: Stream.Writable) => void)
-    ): Promise<ExitCode> {
+    ): Promise<ExitCode | null> {
         const dockerImage = 'gcc:latest' //'alpine:latest';
         const inPath = this.tmp.getPath(key, inFile);
         if (onStderr === undefined) {
@@ -140,6 +162,7 @@ export default class LuService {
         return runOnOutput(
             'docker', [
                 'run',
+                '-i',
                 '--rm',
                 '--pull', 'missing',
                 '--quiet',
@@ -147,7 +170,7 @@ export default class LuService {
                 '-w', '/app', 
                 dockerImage, 
                 'sh',
-                '-c', `gcc -O2 -std=c99 -pedantic ${inFile} -o main; ./main`
+                '-c', `gcc -O2 -std=c99 -pedantic ${inFile} -o main && stdbuf -oL ./main`
             ], 
             { timeout }, 
             onStdout, onStderr, getStdin,
