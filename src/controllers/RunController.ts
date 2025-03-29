@@ -29,6 +29,8 @@ function makeErrorResponse(errors: string[]) {
 
 const validatePost = [
     body("input").isString().isLength({ min: 1 }).withMessage("input must be a non-empty string"),
+    body("args").optional().isArray().withMessage("args must be an array"),
+    body("args.*").isString().withMessage("args must be an array of strings"),
 ];
 
 interface Connection {
@@ -213,7 +215,8 @@ async function post(req: Request, res: Response, next: NextFunction) {
         const getStdin = (stdin: Stream.Writable) => {
             connection.setStdin(stdin);
         }
-        const exitCode = await lu.compileAndRun(key, 'main.c', config.runTimeout, onWrite, onWrite, getStdin);
+        const args = req.body.args || [];
+        const exitCode = await lu.compileAndRun(key, 'main.c', args, config.runTimeout, onWrite, onWrite, getStdin);
         if (exitCode === null) {
             connection.onAbort();
         }

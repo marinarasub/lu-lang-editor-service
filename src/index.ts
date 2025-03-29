@@ -1,5 +1,5 @@
-import config from "./src/constants/config";
-import server from "./src/Server";
+import config from "./constants/config";
+import server from "./Server";
 import { AddressInfo } from "net";
 import path from "path";
 import { existsSync } from 'fs';
@@ -12,6 +12,10 @@ server.listen(config.port, () => {
     console.log(`frontend url: ${config.frontendUrl}`);
     console.log(`full working directory: ${path.resolve(process.cwd())}`);
     console.log(`full lu root path: ${path.resolve(config.luRoot)}`);
-    existsSync(config.luRoot) ? console.log('lu root exists') : console.log('lu root does not exist');
-    existsSync(config.luRoot + '/src/main.py') ? console.log('lu main.py exists') : console.log('lu main.py does not exist');
+    if (!existsSync(config.luRoot)) {
+        console.log('warning: lu root does not exist');
+    }
+    if (!existsSync(config.luRoot + '/src/main.py')) {
+        console.log('warning: lu main.py does not exist');
+    }
 });

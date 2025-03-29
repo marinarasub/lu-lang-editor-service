@@ -5,6 +5,7 @@ import { promises as fs } from 'fs';
 import Stream from 'stream';
 import config from '../constants/config';
 import { exec } from 'child_process';
+import quote from 'shell-quote/quote';
 
 type ExitCode = number;
 
@@ -27,12 +28,12 @@ export class RunResult {
 }
 
 function defaultKill(child: ChildProcess) {
-    return new Promise((resolve, reject) => resolve(child.kill('SIGKILL')));
+    return new Promise((resolve) => resolve(child.kill('SIGKILL')));
 }
 
 function dockerKillName(name: string) {
     return (child: ChildProcess) => {
-        return new Promise((resolve, reject) => exec(`docker kill ${name}`, (error, stdout, stderr) => {
+        return new Promise((resolve) => exec(`docker kill ${name}`, (error) => {
             if (error) {
                 console.error(`error killing docker container ${name} (pid ${child.pid}): ${error?.message} exited with code ${error.code}`);
                 return resolve(false);
@@ -165,7 +166,7 @@ export default class LuService {
 
     // TODO: allow api to choose C compiler and flags etc.
     public async compileAndRun(
-        key: string, inFile: string, timeout: number,
+        key: string, inFile: string, args: string[], timeout: number,
         onStdout: (chunk: string) => void, onStderr?: ((chunk: string) => void),
         getStdin?: ((stdin: Stream.Writable) => void)
     ): Promise<ExitCode | null> {
@@ -191,7 +192,7 @@ export default class LuService {
                 '-w', '/app', 
                 dockerImage, 
                 'sh',
-                '-c', `gcc -O2 -std=c99 -pedantic ${inFile} -o main && stdbuf -oL ./main`
+                '-c', `gcc -O2 -std=c99 -pedantic ${inFile} -o main && stdbuf -oL ./main ${quote(args)}`
             ], 
             { timeout }, 
             onStdout, onStderr, getStdin,
