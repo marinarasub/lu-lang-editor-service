@@ -1,4 +1,4 @@
-import http from 'http';
+import http, { Server } from 'http';
 import app from './App';
 import { Duplex } from 'stream';
 import url from 'url';
@@ -10,7 +10,7 @@ import { IncomingMessage } from 'http';
 //     cert: fs.readFileSync('certs/server.crt'),
 // };
 
-const server = http.createServer(app);
+const server: Server = http.createServer(app)!;
 
 const wsUpgrade = (request: IncomingMessage, socket: Duplex, head: Buffer) => {
     const { pathname } = url.parse(request.url!, false);

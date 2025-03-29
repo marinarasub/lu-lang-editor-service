@@ -3,6 +3,7 @@ import * as path from 'path';
 import TempFileService from './TempFileService';
 import { promises as fs } from 'fs';
 import Stream from 'stream';
+import config from '../constants/config';
 
 type ExitCode = number;
 
@@ -65,15 +66,6 @@ async function runForResult(command: string, args: string[], options: SpawnOptio
     });
 }
 
-
-function expandHomeDir(filePath: string): string {
-    if (filePath.startsWith('~')) {
-        const homeDir = process.env.HOME || '';
-        return path.join(homeDir, filePath.slice(1));
-    }
-    return filePath;
-}
-export const LU_PY_PATH = expandHomeDir('~/repos/lu-lang-py/src/main.py');
 // const keyDir = await createTempDirectory(key);
 //         const luFilePath = path.join(keyDir, `temp.lu`);
 //         const cFilePath = path.join(keyDir, `temp.c`);
@@ -111,7 +103,7 @@ export default class LuService {
     public async transpileLuToC(key: string, inFile: string, outFile: string, timeout: number): Promise<RunResult> {
         return runForResult(
             'python3', [
-                LU_PY_PATH, 
+                `${config.luRoot}/src/main.py`, 
                 '--input', this.tmp.getPath(key, inFile),
                 '--output', this.tmp.getPath(key, outFile)
             ], 
@@ -131,7 +123,7 @@ export default class LuService {
     //     );
     // }
 
-    // Function to execute a binary and stream its output
+    // TODO: allow api to choose C compiler and flags etc.
     public async compileAndRun(
         key: string, inFile: string, timeout: number,
         onStdout: (chunk: string) => void, onStderr?: ((chunk: string) => void),

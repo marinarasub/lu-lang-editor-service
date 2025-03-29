@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { lu } from './services';
 import { body, ValidationError, validationResult } from 'express-validator';
+import config from '../constants/config';
 
 // req body should look like
 // {
@@ -47,7 +48,7 @@ async function post(req: Request, res: Response, next: NextFunction) {
     const key = await lu.getKey();
     try {
         await lu.writeFile(key, 'input.lu', req.body.input, 'ascii');
-        const result = await lu.transpileLuToC(key, 'input.lu', 'output.c', 5000);
+        const result = await lu.transpileLuToC(key, 'input.lu', 'output.c', config.buildTimeout);
         if (result.exitCode !== 0) {
             lu.deleteKey(key);
             res.status(201).json(makeSuccessResponse(key, result.exitCode, result.output, '', -1));
@@ -57,6 +58,7 @@ async function post(req: Request, res: Response, next: NextFunction) {
             res.status(201).json(makeSuccessResponse(key, result.exitCode, result.output, build, -1));
         }
     } catch (error) {
+        res.status(500).json(makeErrorResponse([error instanceof Error ? error.message : 'An unknown error occurred']));
         lu.deleteKey(key);
         next(error);
     }

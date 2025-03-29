@@ -55,9 +55,9 @@ describe('App API Endpoints', () => {
     });
 
     describe('WebSocket /run', () => {
-        const PORT = 3000;
-        const WS_URL = `ws://localhost:${PORT}`;
-        const HTTP_URL = `http://localhost:${PORT}`;
+        const TEST_PORT = process.env.TEST_PORT!;
+        const WS_URL = `ws://localhost:${TEST_PORT}`;
+        const HTTP_URL = `http://localhost:${TEST_PORT}`;
         // ok, i don't know how to test websocket usng app only so this requires a local server
         it('should establish a WebSocket connection and communicate with the client', (done) => {
             fetch(HTTP_URL + '/api/v1/run', {

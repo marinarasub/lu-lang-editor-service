@@ -4,9 +4,10 @@ import { describe, it } from 'mocha';
 import { promisify } from 'util';
 import { existsSync, writeFileSync, readFileSync } from 'fs';
 import TempFileService from '../../src/services/TempFileService';
-import LuService, { LU_PY_PATH } from '../../src/services/LuService';
+import LuService from '../../src/services/LuService';
 import { on } from 'events';
 import { exitCode } from 'process';
+import config from '../../src/constants/config';
 
 const execAsync = promisify(exec);
 
@@ -39,7 +40,7 @@ describe('Program Compilation and Execution', () => {
     before(async () => {
         expect(await isCommandOk('gcc', ['--version'])).to.be.true;
         expect(await isCommandOk('docker', ['--version'])).to.be.true;
-        expect(await isCommandOk('python3', [LU_PY_PATH, '--version'])).to.be.true;
+        expect(await isCommandOk('python3', [`${config.luRoot}/src/main.py`, '--version'])).to.be.true;
         lu = new LuService();
     });
 

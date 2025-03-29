@@ -5,6 +5,7 @@ import { WebSocket } from 'ws';
 import url from 'url';
 import Stream from 'stream';
 import { IncomingMessage } from 'http';
+import config from '../constants/config';
 
 // req body should look like
 // {
@@ -34,13 +35,15 @@ interface Connection {
     onConnect: (ws: WebSocket) => void;
     onSend: (data: string) => void;
     onRecieve: (data: string) => void;
-    onEnd: (exitCode: number) => void;
+    onExit: (exitCode: number) => void;
+    onErr: (error: Error) => void;
 }
 
 // 10kb max
 const DEFAULT_LIMIT = 10 * 1024;
 
 class RunConnection {
+    private id: string;
     private ws: WebSocket | null;
     private stdin: Stream.Writable | null;
     private inBuf: string;
@@ -51,7 +54,8 @@ class RunConnection {
     private bytesOut: number;
     private exitCode: number | null;
 
-    constructor(limitIn: number = DEFAULT_LIMIT, limitOut: number = DEFAULT_LIMIT) {
+    constructor(id: string, limitIn: number = DEFAULT_LIMIT, limitOut: number = DEFAULT_LIMIT) {
+        this.id = id;
         this.ws = null;
         this.stdin = null;
         this.inBuf = '';
@@ -113,14 +117,31 @@ class RunConnection {
         }
     }
 
-    onEnd(exitCode: number) {
+    onExit(exitCode: number) {
         this.exitCode = exitCode;
         this.outBuf += `\n[process exited with code ${exitCode}]\n`;
         if (this.ws !== null) {
-            if (this.outBuf.length > 0) {
-                this.ws.send(this.outBuf);
-            }
+            this.ws.send(this.outBuf);
             this.close();
+        } else {
+            // after process exists, wait a bit in case the client hasn't connected yet
+            setTimeout(() => {
+                connections.delete(this.id);
+            }, config.wsTimeout);
+        }
+    }
+
+    onErr(error: Error) {
+        this.outBuf += `\n[run failed]: ${error.message}\n`;
+        if (this.ws !== null) {
+            this.ws.send(this.outBuf);
+            this.close();
+        } else {
+            // after error starting process, wait a bit in case the client hasn't connected yet
+            setTimeout(() => {
+                connections.delete(this.id);
+            },
+            config.wsTimeout);
         }
     }
 }
@@ -164,11 +185,11 @@ async function post(req: Request, res: Response, next: NextFunction) {
     }
 
     const key = await lu.getKey();
+    const connection = new RunConnection(key);
+    connections.set(key, connection);
     try {
         await lu.writeFile(key, 'main.c', req.body.input, 'ascii');
-        const connection = new RunConnection();
-        connections.set(key, connection);
-
+        
         res.status(201).json(makeSuccessResponse(key));
 
         const onWrite = (data: string) => {
@@ -177,10 +198,11 @@ async function post(req: Request, res: Response, next: NextFunction) {
         const getStdin = (stdin: Stream.Writable) => {
             connection.setStdin(stdin);
         }
-        const exitCode = await lu.compileAndRun(key, 'main.c', 10000, onWrite, onWrite, getStdin);
-        connection.onEnd(exitCode);
+        const exitCode = await lu.compileAndRun(key, 'main.c', config.runTimeout, onWrite, onWrite, getStdin);
+        connection.onExit(exitCode);
         lu.deleteKey(key);
     } catch (error) {
+        connection.onErr(error instanceof Error ? error : new Error('an unknown error occurred'));
         lu.deleteKey(key);
         next(error);
     }

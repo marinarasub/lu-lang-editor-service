@@ -2,14 +2,16 @@ import express from 'express';
 import api from './routes/VersionRoute';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
+import config from './constants/config';
 
 const app = express();
 
 app.use(express.json());
 
 if (process.env.NODE_ENV === 'development') {
+    // frontend cors for development
     const corsOptions = {
-        origin: 'http://localhost:5000',
+        origin: 'http://localhost:5001',
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
         credentials: true,
     };
@@ -17,8 +19,9 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 const limiter = rateLimit({
-    windowMs: 10 * 60 * 1000,
-    max: 100
+    windowMs: config.rateLimitWindow,
+    max: config.rateLimitWindowMax,
+    message: { error: 'Rate Limit Exceeded' },
 });
 
 app.use(limiter);

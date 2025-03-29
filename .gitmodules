@@ -1,0 +1,3 @@
+[submodule "lu-lang-py"]
+	path = lu-lang-py
+	url = git@github.com:marinarasub/lu-lang-py.git
