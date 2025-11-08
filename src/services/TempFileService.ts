@@ -57,7 +57,7 @@ export default class TempFileService {
         }
         const keyDir = path.join(this.root, key);
         this.addTempKey(key, keyDir);
-        return fs.mkdir(keyDir).then(() => key);
+        return fs.mkdir(keyDir, { recursive: true }).then(() => key);
     }
 
     public async removeTempDirectory(key: string): Promise<void> {

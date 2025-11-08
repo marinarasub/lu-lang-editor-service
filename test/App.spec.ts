@@ -12,6 +12,8 @@ int main() {
 }
 `;
 
+const DEFAULT_PORT = 3000;
+
 describe('App API Endpoints', () => {
     describe('GET /api/v1/version', () => {
         it('should return the version of the application', async () => {
@@ -55,7 +57,7 @@ describe('App API Endpoints', () => {
     });
 
     describe('WebSocket /run', () => {
-        const TEST_PORT = process.env.TEST_PORT!;
+        const TEST_PORT = process.env.TEST_PORT || DEFAULT_PORT;
         const WS_URL = `ws://localhost:${TEST_PORT}`;
         const HTTP_URL = `http://localhost:${TEST_PORT}`;
         // ok, i don't know how to test websocket usng app only so this requires a local server
