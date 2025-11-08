@@ -5,9 +5,11 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 const LU_ROOT = process.env.LU_ROOT || './lu-lang-py';
 
-const BUILD_TIMEOUT = 10 * 1000; // 10s
-const RUN_TIMEOUT = 30 * 1000; // 30s
-const WS_TIMEOUT = 60 * 1000; // 1min
+const BUILD_TIMEOUT = 30 * 1000; // 30s
+const RUN_TIMEOUT = 2 * 60 * 1000; // 2min
+const WS_TIMEOUT = 3 * 60 * 1000; // 3min
+
+const RUN_MAX_MEMORY_MB = 50; // 50mb
 
 const ISTREAM_MAX = 1 * 1024 * 1024; // 1mb
 const OSTREAM_MAX = 1 * 1024 * 1024; // 1mb
@@ -21,6 +23,7 @@ export interface Config {
     frontendUrl: string;
     buildTimeout: number;
     runTimeout: number;
+    runMaxMemoryMb: number;
     wsTimeout: number;
     istreamMax: number;
     ostreamMax: number;
@@ -36,6 +39,7 @@ const DEV_CONFIG: Config = {
     buildTimeout: BUILD_TIMEOUT,
     runTimeout: RUN_TIMEOUT,
     wsTimeout: WS_TIMEOUT,
+    runMaxMemoryMb: RUN_MAX_MEMORY_MB,
     istreamMax: ISTREAM_MAX,
     ostreamMax: OSTREAM_MAX,
     rateLimitWindow: RATE_LIMIT_WINDOW,
@@ -50,6 +54,7 @@ const PROD_CONFIG: Config = {
     buildTimeout: BUILD_TIMEOUT,
     runTimeout: RUN_TIMEOUT,
     wsTimeout: WS_TIMEOUT,
+    runMaxMemoryMb: RUN_MAX_MEMORY_MB,
     istreamMax: ISTREAM_MAX,
     ostreamMax: OSTREAM_MAX,
     rateLimitWindow: RATE_LIMIT_WINDOW,

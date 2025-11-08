@@ -36,7 +36,7 @@ const validatePost = [
 interface Connection {
     onConnect: (ws: WebSocket) => void;
     onSend: (data: string) => void;
-    onRecieve: (data: string) => void;
+    onReceive: (data: string) => void;
     onExit: (exitCode: number) => void;
     onAbort: () => void;
     onErr: (error: Error) => void;
@@ -56,9 +56,16 @@ class RunConnection {
     private bytesIn: number;
     private bytesOut: number;
     private exitCode: number | null;
+    private onClose: (conn: RunConnection) => void;
 
-    constructor(id: string, limitIn: number = DEFAULT_LIMIT, limitOut: number = DEFAULT_LIMIT) {
+    constructor(
+        id: string,
+        onClose: (conn: RunConnection) => void,
+        limitIn: number = DEFAULT_LIMIT,
+        limitOut: number = DEFAULT_LIMIT
+    ) {
         this.id = id;
+        this.onClose = onClose;
         this.ws = null;
         this.stdin = null;
         this.inBuf = '';
@@ -75,6 +82,7 @@ class RunConnection {
             this.ws.close();
             this.ws = null;
         }
+        this.onClose(this);
     }
 
     setStdin(stdin: Stream.Writable) {
@@ -107,7 +115,7 @@ class RunConnection {
         }
     }
 
-    onRecieve(data: string) {
+    onReceive(data: string) {
         this.inBuf += data;
         this.bytesIn += data.length;
         if (this.stdin !== null) {
@@ -129,7 +137,7 @@ class RunConnection {
         } else {
             // after process is killed, wait a bit in case the client hasn't connected yet
             setTimeout(() => {
-                connections.delete(this.id);
+                this.close();
             }, config.wsTimeout);
         }
     }
@@ -143,7 +151,7 @@ class RunConnection {
         } else {
             // after process exits, wait a bit in case the client hasn't connected yet
             setTimeout(() => {
-                connections.delete(this.id);
+                this.close();
             }, config.wsTimeout);
         }
     }
@@ -156,9 +164,8 @@ class RunConnection {
         } else {
             // after error starting process, wait a bit in case the client hasn't connected yet
             setTimeout(() => {
-                connections.delete(this.id);
-            },
-            config.wsTimeout);
+                this.close();
+            }, config.wsTimeout);
         }
     }
 }
@@ -182,7 +189,7 @@ wsServer.on('connection', (ws: WebSocket, request: IncomingMessage) => {
     connection.onConnect(ws);
 
     ws.on('message', (message) => {
-        connection.onRecieve(message.toString());
+        connection.onReceive(message.toString());
     });
 
     ws.on('close', () => {
@@ -202,7 +209,11 @@ async function post(req: Request, res: Response, next: NextFunction) {
     }
 
     const key = await lu.getKey();
-    const connection = new RunConnection(key);
+    const connection = new RunConnection(
+        key
+    , () => {
+        connections.delete(key);
+    });
     connections.set(key, connection);
     try {
         await lu.writeFile(key, 'main.c', req.body.input, 'ascii');
@@ -216,7 +227,7 @@ async function post(req: Request, res: Response, next: NextFunction) {
             connection.setStdin(stdin);
         }
         const args = req.body.args || [];
-        const exitCode = await lu.compileAndRun(key, 'main.c', args, config.runTimeout, onWrite, onWrite, getStdin);
+        const exitCode = await lu.compileAndRun(key, 'main.c', args, config.runTimeout, config.runMaxMemoryMb, onWrite, onWrite, getStdin);
         if (exitCode === null) {
             connection.onAbort();
         }

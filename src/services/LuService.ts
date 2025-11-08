@@ -5,7 +5,7 @@ import { promises as fs } from 'fs';
 import Stream from 'stream';
 import config from '../constants/config';
 import { exec } from 'child_process';
-import quote from 'shell-quote/quote';
+import { quote } from 'shell-quote';
 
 type ExitCode = number;
 
@@ -28,7 +28,13 @@ export class RunResult {
 }
 
 function defaultKill(child: ChildProcess) {
-    return new Promise((resolve) => resolve(child.kill('SIGKILL')));
+    return new Promise((resolve) => {
+        const result = child.kill('SIGKILL');
+        if (!result) {
+            console.error(`error killing process (pid ${child.pid}): kill returned false`);
+        }
+        resolve(result);
+    });
 }
 
 function dockerKillName(name: string) {
@@ -36,7 +42,12 @@ function dockerKillName(name: string) {
         return new Promise((resolve) => exec(`docker kill ${name}`, (error) => {
             if (error) {
                 console.error(`error killing docker container ${name} (pid ${child.pid}): ${error?.message} exited with code ${error.code}`);
-                return resolve(false);
+                // fallback to default kill if docker kill fails
+                defaultKill(child).then((result) => {
+                    resolve(result);
+                }).catch(() => {
+                    resolve(false);
+                });
             }
             return resolve(true);
         }));
@@ -166,7 +177,7 @@ export default class LuService {
 
     // TODO: allow api to choose C compiler and flags etc.
     public async compileAndRun(
-        key: string, inFile: string, args: string[], timeout: number,
+        key: string, inFile: string, args: string[], timeout: number, maxMemoryMb: number,
         onStdout: (chunk: string) => void, onStderr?: ((chunk: string) => void),
         getStdin?: ((stdin: Stream.Writable) => void)
     ): Promise<ExitCode | null> {
@@ -184,8 +195,9 @@ export default class LuService {
                 '-i',
                 '--name', key,
                 '--stop-timeout', '5',
-                '-m', '10m', // 10mb memory limit
+                '-m', `${maxMemoryMb}m`, // 50mb memory limit
                 '--rm',
+                '--network=none',
                 '--pull', 'missing',
                 '--quiet',
                 '-v', `${path.dirname(inPath)}/:/app/`, 

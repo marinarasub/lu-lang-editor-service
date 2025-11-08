@@ -64,7 +64,7 @@ describe('Program Compilation and Execution', () => {
         const onWrite = (data: string) => {
             output += data;
         };
-        const exitCode = await lu.compileAndRun(key, 'hello.c', [], 1000, onWrite);
+        const exitCode = await lu.compileAndRun(key, 'hello.c', [], 1000, 100, onWrite);
         expect(output).to.equal('Hello, World!\n');
         expect(exitCode).to.equal(0);
 
@@ -78,7 +78,7 @@ describe('Program Compilation and Execution', () => {
         const onWrite = (data: string) => {
             output += data;
         };
-        const exitCode = await lu.compileAndRun(key, 'hello.c', [], 1000, onWrite);
+        const exitCode = await lu.compileAndRun(key, 'hello.c', [], 1000, 100, onWrite);
         expect(output).to.equal('Hello, World!\n');
         expect(exitCode).to.equal(0);
         lu.deleteKey(key);

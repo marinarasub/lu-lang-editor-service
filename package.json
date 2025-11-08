@@ -16,8 +16,8 @@
   "devDependencies": {
     "@eslint/js": "^9.23.0",
     "@tsconfig/node22": "^22.0.1",
-    "@types/cors": "^2.8.17",
     "@types/chai": "^5.2.1",
+    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.13.13",
@@ -40,7 +40,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "express-validator": "^7.2.1",
-    "shell-quote": "^1.8.2",
+    "shell-quote": "^1.8.3",
     "uuid": "^11.1.0",
     "ws": "^8.18.1"
   }
